@@ -141,7 +141,7 @@ def venues():
         venues_list = []
         for venue in venues:
             if (venue.city == loc[0]) and (venue.state == loc[1]):
-                venue_shows = Show.query.filter_by(venue_id=venue.id).all()
+                venue_shows = Show.query.filter(venue_id=venue.id).all()
                 num_upcoming = 0
                 for show in venue_shows:
                     if show.start_time > now:
@@ -224,8 +224,7 @@ def search_venues():
 @app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
       
-    venue = Venue.query.filter_by(venue_id)
-    genres = [genre.name for genre in venue.genres]    
+    venue = Venue.query.filter_by(venue_id)   
     past_shows = []
     past_shows_count = 0
     upcoming_shows = []
@@ -251,7 +250,7 @@ def show_venue(venue_id):
     data = {
                   "id": venue_id,
                   "name": venue.name,
-                    "genres": genres,
+                    "genres": venue.genres,
                     "city": venue.city,
                     "state": venue.state,
                     "phone": (venue.phone[:3] + '-' + venue.phone[3:6] + '-' + venue.phone[6:]),
@@ -487,7 +486,6 @@ def search_artists():
 def show_artist(artist_id):
   artist = Artist.query.filter(artist_id)
   #print(artist) 
-  #genres = [genre.name for genre in artist.genres]
   past_shows = []
   past_shows_count = 0
   upcoming_shows = []
@@ -611,11 +609,10 @@ def show_artist(artist_id):
 def edit_artist(artist_id):
   form = ArtistForm()
   artist = Venue.query.filter_by(artist_id)
-  genres = [genre.name for genre in artist.genres]
   artist={
     "id": artist_id,
     "name": artist.name,
-    "genres": genres ,
+    "genres": artist.genres ,
     "state": artist_id.state,
     "phone": (artist.phone[:3] + '_' + artist.phone[3:6] + '_' + artist.phone[6:]),
     "website_link": artist.website_link,
@@ -645,8 +642,9 @@ def edit_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-      form = ArtistForm()
-      
+    form = ArtistForm()
+    error = False 
+    try:  
       name = form.name.data
       city = form.city.data
       state = form.state.data
@@ -658,44 +656,31 @@ def edit_artist_submission(artist_id):
       image_link = form.image_link.data
       website_link = form.website_link.data
       facebook_link = form.facebook_link.data
-      if not form.validate():
-          flash( form.errors )
-          return redirect(url_for('edit_artist_submission', artist_id=artist_id))
-      else:
-        error = False 
-        try:
-          artist = Artist.query.filter_by(artist_id) 
-          artist.name = name
-          artist.city = city
-          artist.state = state
-          artist.phone = phone         
-          artist.seeking_talent = seeking_talent
-          artist.seeking_description = seeking_description
-          artist.image_link = image_link
-          artist.website_link = website_link
-          artist.facebook_link = facebook_link
+        
+      artist = Artist.query.filter_by(artist_id) 
+      artist.name = name
+      artist.city = city
+      artist.state = state
+      artist.phone = phone  
+      artist.genres = genres       
+      artist.seeking_talent = seeking_talent
+      artist.seeking_description = seeking_description
+      artist.image_link = image_link
+      artist.website_link = website_link
+      artist.facebook_link = facebook_link
           
-          artist.genres = []
-          for genre in genres:
-                get_genre = Genres.query.filter_by(name=genre).one_or_none()  
-                if get_genre:
-                    artist.genres.append(get_genre)
-                else:
-                    new_genre = Genres(name=genre)
-                    db.session.add(new_genre)
-                    artist.genres.append(new_genre)
-          db.session.commit()
-        except:
+      db.session.commit()
+    except:
           error = True
           print (' something is wrong with edit_artist_submission()')
           db.session.rollback()
-        finally:
+    finally:
           db.session.close()
-        if not error:
-              flash('Artist' + request.form['name'] + ' was successfully updated!')
+    if not error:
+              flash('artist was successfully updated!')
               return redirect(url_for('show_artist', artist_id=artist_id))
-        else:
-          flash(' error occurred: ' + request.form['name'] + ' was not successfully updated!'  )  
+    else:
+          flash(' error occurred artist was not successfully updated!'  )  
           abort(404)  
       
   # TODO: take values from the form submitted, and update existing
@@ -705,11 +690,10 @@ def edit_artist_submission(artist_id):
 def edit_venue(venue_id):
   form = VenueForm()
   venue = Venue.query.filter_by(venue_id)
-  genres = [genre.name for genre in venue.genres]
   venue={
     "id": venue_id,
     "name": venue.name,
-    "genres": genres ,
+    "genres": venue.genres ,
     "address": venue.address,
     "state": venue.state,
     "phone": (venue.phone[:3] + '_' + venue.phone[3:6] + '_' + venue.phone[6:]),
@@ -739,8 +723,9 @@ def edit_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-      form = VenueForm()
-      
+    form = VenueForm()
+    error = False 
+    try:
       name = form.name.data
       city = form.city.data
       state = form.state.data
@@ -751,46 +736,33 @@ def edit_venue_submission(venue_id):
       seeking_talent = True if form.seeking_talent.data == 'Yes' else False
       seeking_description = form.seeking_description.data
       website_link = form.website_link.data
+      image_link = form.image_link.data
       facebook_link = form.facebook_link.data
-      if not form.validate():
-          flash( form.errors )
-          return redirect(url_for('edit_venue_submission', venue_id=venue_id))
-      else:
-        error = False 
-        try:
-          venue = Venue.query.filter_by(venue_id) 
-          venue.name = name
-          venue.city = city
-          venue.state = state
-          venue.address = address
-          venue.phone = phone         
-          venue.seeking_talent = seeking_talent
-          venue.seeking_description = seeking_description
-          venue.image_link = image_link
-          venue.website = website_link
-          venue.facebook_link = facebook_link
-          
-          venue.genres = []
-          for genre in genres:
-                get_genre = Genres.query.filter_by(name=genre).one_or_none()  
-                if get_genre:
-                    venue.genres.append(get_genre)
-                else:
-                    new_genre = Genres(name=genre)
-                    db.session.add(new_genre)
-                    venue.genres.append(new_genre)
-          db.session.commit()
-        except:
+        
+      venue = Venue.query.filter_by(venue_id) 
+      venue.name = name
+      venue.city = city
+      venue.state = state
+      venue.address = address
+      venue.phone = phone         
+      venue.seeking_talent = seeking_talent
+      venue.seeking_description = seeking_description
+      venue.image_link = image_link
+      venue.website = website_link
+      venue.facebook_link = facebook_link
+      venue.genres = genres
+      db.session.commit()
+    except:
           error = True
           print (' something is wrong with edit_venue_submission()')
           db.session.rollback()
-        finally:
+    finally:
           db.session.close()
-        if not error:
-              flash('Venue' + request.form['name'] + ' was successfully updated!')
+    if not error:
+              flash(' list was successfully updated!')
               return redirect(url_for('show_venue', venue_id=venue_id))
-        else:
-          flash(' error occurred: ' + request.form['name'] + ' was not successfully updated!'  )  
+    else:
+          flash(' error occurred was not successfully updated!'  )  
           abort(404)  
               
   # TODO: take values from the form submitted, and update existing
